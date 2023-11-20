@@ -1,7 +1,9 @@
 <div class="row mt-5">
   <div class="col-md-6 m-auto">
     <div class="card card-body text-center">
-      <h1 class="text-center mb-3">Welcome, <%= user.name %></h1>
+      <h1 class="text-center mb-3 font-weight-bold">
+        Welcome, <strong class="text-muted"> <%= user.name %> </strong>
+      </h1>
       <p class="lead mt-4">
         <a href="/logout" class="btn btn-danger btn-block mb-2">Logout</a>
       </p>

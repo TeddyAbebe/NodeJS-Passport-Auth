@@ -1,13 +1,14 @@
+require("dotenv").config();
 const express = require("express");
 const routes = require("./routes");
 const mongoose = require("mongoose");
 const passport = require("passport");
-const LocalStrategy = require("passport-local").Strategy;
-const session = require("express-session");
 const bodyParser = require("body-parser");
 const User = require("./models/User");
-const MongoStore = require("connect-mongo");
-require("dotenv").config();
+const JwtStrategy = require("passport-jwt").Strategy;
+const ExtractJwt = require("passport-jwt").ExtractJwt;
+const jwt = require("jsonwebtoken");
+const cookieParser = require("cookie-parser");
 
 // Connect to MongoDB
 mongoose
@@ -22,38 +23,35 @@ app.set("view engine", "ejs");
 
 // Middleware
 app.use(bodyParser.urlencoded({ extended: true }));
-
-app.use(
-  session({
-    secret: process.env.SESSION_SECRET,
-    resave: true,
-    saveUninitialized: true,
-    store: MongoStore.create({
-      mongoUrl: process.env.MONGODB_URL,
-      ttl: 14 * 24 * 60 * 60,
-      autoRemove: "native",
-    }),
-  })
-);
-
+app.use(cookieParser());
 app.use(passport.initialize());
-app.use(passport.session());
 
 passport.use(
-  new LocalStrategy({ usernameField: "email" }, (email, password, done) => {
-    User.findOne({ email: email }, (err, user) => {
-      if (err) return done(err);
-      if (!user) return done(null, false, { message: "Incorrect email." });
-
-      bcrypt.compare(password, user.password, (err, res) => {
-        if (res) {
+  new JwtStrategy(
+    {
+      jwtFromRequest: ExtractJwt.fromExtractors([
+        ExtractJwt.fromAuthHeaderAsBearerToken(),
+        (req) => {
+          const token = req.cookies.token;
+          return token;
+        },
+      ]),
+      secretOrKey: process.env.JWT_SECRET,
+    },
+    async (jwt_payload, done) => {
+      try {
+        const user = await User.findById(jwt_payload.sub).exec();
+        if (user) {
           return done(null, user);
         } else {
-          return done(null, false, { message: "Incorrect password." });
+          return done(null, false);
         }
-      });
-    });
-  })
+      } catch (err) {
+        console.error("JWT Verification Error:", err);
+        return done(err, false);
+      }
+    }
+  )
 );
 
 // Serialize and Deserialize user

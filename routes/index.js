@@ -1,8 +1,9 @@
+require("dotenv").config();
 const router = require("express").Router();
 const passport = require("passport");
 const bcrypt = require("bcrypt");
 const User = require("../models/User");
-const isAuthenticated = require("./auth");
+const jwt = require("jsonwebtoken");
 
 router.get("/", (req, res) => {
   res.render("home", { body: "welcome" });
@@ -10,7 +11,8 @@ router.get("/", (req, res) => {
 
 // Auth Register
 router.get("/register", (req, res) => {
-  res.render("home", { body: "register" });
+  const errorMessage = req.query.error;
+  res.render("home", { body: "register", error: errorMessage });
 });
 
 router.post("/register", async (req, res) => {
@@ -18,7 +20,7 @@ router.post("/register", async (req, res) => {
 
   if (password !== password2) {
     // Passwords do not match
-    res.render("register", { message: "Passwords do not match" });
+    return res.redirect("/register?error=Passwords do not match");
   } else {
     try {
       // Check if the user already exists
@@ -26,7 +28,7 @@ router.post("/register", async (req, res) => {
 
       if (existingUser) {
         // User already exists
-        res.render("register", { message: "Email is already registered" });
+        return res.redirect("/register?error=User already registered");
       } else {
         // Create a new user
         const hashedPassword = await bcrypt.hash(password, 10);
@@ -38,7 +40,6 @@ router.post("/register", async (req, res) => {
 
         await newUser.save();
 
-        // Redirect to login page after successful registration
         res.redirect("/login");
       }
     } catch (err) {
@@ -50,7 +51,8 @@ router.post("/register", async (req, res) => {
 
 // Auth Login
 router.get("/login", (req, res) => {
-  res.render("home", { body: "login" });
+  const errorMessage = req.query.error;
+  res.render("home", { body: "login", error: errorMessage });
 });
 
 router.post("/login", async (req, res, next) => {
@@ -61,7 +63,7 @@ router.post("/login", async (req, res, next) => {
 
     if (!user) {
       // User not found
-      return res.redirect("/login");
+      return res.redirect("/login?error=User not found");
     }
 
     // Check if the password is correct
@@ -69,17 +71,20 @@ router.post("/login", async (req, res, next) => {
 
     if (!passwordMatch) {
       // Incorrect password
-      return res.redirect("/login");
+      return res.redirect("/login?error=Incorrect password");
     }
 
-    // Log in the user manually
-    req.logIn(user, (err) => {
-      if (err) {
-        return next(err);
-      }
-
-      return res.redirect("/profile");
+    const token = jwt.sign({ sub: user.id }, process.env.JWT_SECRET, {
+      expiresIn: "1h",
     });
+
+    // Log the token
+    console.log("Generated Token:", token);
+
+    // Send the token to the client
+    res.cookie("token", token, { httpOnly: false });
+
+    return res.redirect("/profile");
   } catch (err) {
     console.error(err);
     res.sendStatus(500);
@@ -87,18 +92,19 @@ router.post("/login", async (req, res, next) => {
 });
 
 // Profile
-router.get("/profile", isAuthenticated, (req, res) => {
-  res.render("home", { user: req.user, body: "profile" });
-});
+router.get(
+  "/profile",
+  passport.authenticate("jwt", { session: false }),
+  (req, res) => {
+    res.render("home", { user: req.user, body: "profile" });
+  }
+);
 
 // Logout
 router.get("/logout", (req, res) => {
-  req.logout((err) => {
-    if (err) {
-      console.error(err);
-    }
-    res.redirect("/");
-  });
+  res.clearCookie("token");
+  res.redirect("/");
 });
+``;
 
 module.exports = router;
