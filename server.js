@@ -7,7 +7,6 @@ const bodyParser = require("body-parser");
 const User = require("./models/User");
 const JwtStrategy = require("passport-jwt").Strategy;
 const ExtractJwt = require("passport-jwt").ExtractJwt;
-const jwt = require("jsonwebtoken");
 const cookieParser = require("cookie-parser");
 
 // Connect to MongoDB
