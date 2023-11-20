@@ -29,7 +29,7 @@ app.use(
     resave: true,
     saveUninitialized: true,
     store: MongoStore.create({
-      mongoUrl: "mongodb://127.0.0.1:27017/users",
+      mongoUrl: process.env.MONGODB_URL,
       ttl: 14 * 24 * 60 * 60,
       autoRemove: "native",
     }),
