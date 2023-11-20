@@ -10,7 +10,8 @@ router.get("/", (req, res) => {
 
 // Auth Register
 router.get("/register", (req, res) => {
-  res.render("home", { body: "register" });
+  const errorMessage = req.query.error;
+  res.render("home", { body: "register", error: errorMessage });
 });
 
 router.post("/register", async (req, res) => {
@@ -18,7 +19,7 @@ router.post("/register", async (req, res) => {
 
   if (password !== password2) {
     // Passwords do not match
-    res.render("register", { message: "Passwords do not match" });
+    return res.redirect("/register?error=Passwords do not match");
   } else {
     try {
       // Check if the user already exists
@@ -26,7 +27,7 @@ router.post("/register", async (req, res) => {
 
       if (existingUser) {
         // User already exists
-        res.render("register", { message: "Email is already registered" });
+        return res.redirect("/register?error=User already registered");
       } else {
         // Create a new user
         const hashedPassword = await bcrypt.hash(password, 10);
@@ -50,7 +51,8 @@ router.post("/register", async (req, res) => {
 
 // Auth Login
 router.get("/login", (req, res) => {
-  res.render("home", { body: "login" });
+  const errorMessage = req.query.error;
+  res.render("home", { body: "login", error: errorMessage });
 });
 
 router.post("/login", async (req, res, next) => {
@@ -61,7 +63,7 @@ router.post("/login", async (req, res, next) => {
 
     if (!user) {
       // User not found
-      return res.redirect("/login");
+      return res.redirect("/login?error=User not found");
     }
 
     // Check if the password is correct
@@ -69,7 +71,7 @@ router.post("/login", async (req, res, next) => {
 
     if (!passwordMatch) {
       // Incorrect password
-      return res.redirect("/login");
+      return res.redirect("/login?error=Incorrect password");
     }
 
     // Log in the user manually
