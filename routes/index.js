@@ -78,9 +78,6 @@ router.post("/login", async (req, res, next) => {
       expiresIn: "1h",
     });
 
-    // Log the token
-    console.log("Generated Token:", token);
-
     // Send the token to the client
     res.cookie("token", token, { httpOnly: false });
 
@@ -94,8 +91,27 @@ router.post("/login", async (req, res, next) => {
 // Profile
 router.get(
   "/profile",
-  passport.authenticate("jwt", { session: false }),
+  (req, res, next) => {
+    passport.authenticate("jwt", { session: false }, (err, user) => {
+      if (err || !user) {
+        // Authentication failed
+        const errorMessage =
+          "You are not Logged In. Please LogIn to access this page !";
+        return res.render("home", { body: "login", error: errorMessage });
+      }
+
+      // Authentication succeeded
+      req.logIn(user, { session: false }, (err) => {
+        if (err) {
+          return next(err);
+        }
+        next();
+      });
+    })(req, res, next);
+  },
+
   (req, res) => {
+    // Render the profile page
     res.render("home", { user: req.user, body: "profile" });
   }
 );
