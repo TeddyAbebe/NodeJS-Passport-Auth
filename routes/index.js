@@ -88,6 +88,24 @@ router.post("/login", async (req, res, next) => {
   }
 });
 
+// Google OAuth
+router.get(
+  "/google",
+  passport.authenticate("google", {
+    scope: ["profile"],
+  })
+);
+
+// Callback route for google to redirect to
+router.get("/google/redirect", passport.authenticate("google"), (req, res) => {
+  res.send("You reached the callback URI");
+});
+
+// Facebook OAuth
+router.get("/facebook", (req, res) => {
+  res.send("Facebook OAuth");
+});
+
 // Profile
 router.get(
   "/profile",

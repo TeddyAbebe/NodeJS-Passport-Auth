@@ -2,6 +2,8 @@ const User = require("../models/User");
 const passport = require("passport");
 const JwtStrategy = require("passport-jwt").Strategy;
 const ExtractJwt = require("passport-jwt").ExtractJwt;
+const GoogleStrategy = require("passport-google-oauth2").Strategy;
+require("dotenv").config();
 
 const options = {
   jwtFromRequest: ExtractJwt.fromExtractors([
@@ -28,6 +30,37 @@ passport.use(
       return done(err, false);
     }
   })
+);
+
+// Google OAuth
+passport.use(
+  new GoogleStrategy(
+    {
+      // option for the Google Strategy
+      callbackURL: "/google/redirect",
+      clientID: process.env.GOOGLE_CLIENT_ID,
+      clientSecret: process.env.GOOGLE_CLIENT_SECRET,
+    },
+    (accessToken, refreshToken, profile, done) => {
+      // Passport callback function
+
+      // Check is User already exists
+      User.findOne({ googleId: profile.id }).then((currentUser) => {
+        if (currentUser) {
+          console.log("User is:", currentUser);
+        } else {
+          new User({
+            name: profile.displayName,
+            googleId: profile.id,
+          })
+            .save()
+            .then((newUser) => {
+              console.log("New User Created:" + newUser);
+            });
+        }
+      });
+    }
+  )
 );
 
 // Serialize and Deserialize user
